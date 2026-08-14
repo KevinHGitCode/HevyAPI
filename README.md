@@ -35,6 +35,7 @@ largo de ~64 chars, es para el flujo automático que se implementará después �
 | `python cli.py fetch --username kevind21` | Igual, forzando el handle. |
 | `python cli.py fetch --limit 5 --max-pages 40` | Ajusta paginación (⚠️ la API limita `limit` a **5 máx.**). |
 | `python cli.py fetch --short-ids abc,def` | Baja solo esos workouts (plan B sin listar). |
+| `python cli.py resimplify` | Re-slim + compacta (VACUUM) los workouts ya cacheados, sin re-descargar. |
 | `python cli.py export` | Resumen compacto por ejercicio (top set + volumen) para pegar en el chat. |
 | `python cli.py exercise "sentadilla"` | Progresión de un ejercicio en el tiempo (peso, reps, 1RM est, volumen). |
 | `python cli.py progress` | Resumen: workouts cacheados + volumen total. |
@@ -61,9 +62,19 @@ tests/                  11 tests
 
 ## Almacenamiento (SQLite)
 
-Los workouts se guardan en `data/hevy.db`, tabla `workouts(short_id PK, updated_at, data JSON)` —
-cada entrenamiento como JSON. El `fetch` es **incremental**: usa `short_id` para no descargar dos
-veces lo mismo y **corta** apenas encuentra un workout ya guardado (la API viene de nuevo→viejo).
+Los workouts se guardan en `data/hevy.db`, tabla `workouts(short_id PK, updated_at, data JSON)`.
+El JSON se **simplifica** antes de guardar (se descartan títulos en 8 idiomas de más, thumbnails,
+urls de video, uuids, geospatial, likes…) → queda ~73% más chico. Estructura guardada:
+
+```
+workout : { short_id, name, date, volume_kg, exercises: [...] }
+exercise: { name (español), name_en, muscle_group, other_muscles, equipment, type, sets: [...] }
+set     : { weight_kg, reps, rpe, pr: [tipos de récord] }
+```
+
+El `fetch` es **incremental**: usa `short_id` para no descargar dos veces lo mismo y **corta**
+apenas encuentra un workout ya guardado (la API viene de nuevo→viejo). Para traer **ediciones** de
+workouts viejos, usá `fetch --full` (re-escanea y sobrescribe). `resimplify` re-slim el cache viejo.
 La primera vez migra automáticamente el viejo `data/workouts.json` si existe.
 
 ## Notas

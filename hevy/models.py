@@ -11,39 +11,43 @@ class SetEntry:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]):
+        # PR desde varias formas: 'pr' (simplificado), 'prs'/'personalRecords' (crudo), 'is_pr'
+        is_pr = bool(d.get("pr")) or bool(d.get("prs")) or bool(d.get("personalRecords")) or bool(d.get("is_pr"))
         return cls(
             weight_kg=d.get("weight_kg") or d.get("weight"),
             reps=d.get("reps"),
             rpe=d.get("rpe"),
-            # API may report personal records using several keys: `is_pr`, `prs`, `personalRecords`
-            is_pr=(bool(d.get("is_pr")) or bool(d.get("prs")) or bool(d.get("personalRecords")))
+            is_pr=is_pr,
         )
 
 
 @dataclass
 class ExerciseEntry:
-    # store both english and spanish titles when present
-    title: str
-    es_title: Optional[str] = None
+    title: str  # inglés
+    es_title: Optional[str] = None  # español
+    muscle_group: Optional[str] = None
+    equipment: Optional[str] = None
     sets: List[SetEntry] = field(default_factory=list)
 
     @property
     def name(self) -> str:
-        # combined name used for search/matching: contains both english and spanish
-        parts = []
-        if self.title:
-            parts.append(self.title)
-        if self.es_title:
-            parts.append(self.es_title)
+        # nombre combinado (es + en) para buscar en cualquiera de los dos idiomas
+        parts = [p for p in [self.es_title, self.title] if p]
         return " ".join(parts).strip()
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]):
         sets = [SetEntry.from_dict(s) for s in d.get("sets", [])]
-        # prefer explicit title fields; fall back to legacy `name` or `exercise` keys
-        title = d.get("title") or d.get("name") or d.get("exercise") or ""
-        es_title = d.get("es_title") or d.get("esTitle") or None
-        return cls(title=title, es_title=es_title, sets=sets)
+        # crudo: title (en) + es_title · simplificado: name (es) + name_en (en)
+        es = d.get("es_title") or d.get("name")
+        en = d.get("title") or d.get("name_en")
+        return cls(
+            title=en or "",
+            es_title=es,
+            muscle_group=d.get("muscle_group"),
+            equipment=d.get("equipment") or d.get("equipment_category"),
+            sets=sets,
+        )
 
 
 @dataclass
@@ -55,7 +59,10 @@ class Workout:
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]):
-        exercises = []
-        for ex in d.get("exercises", []) or d.get("exercise_list", []) or []:
-            exercises.append(ExerciseEntry.from_dict(ex))
-        return cls(short_id=d.get("short_id") or d.get("id") or "", date=d.get("date") or d.get("created_at") or "", exercises=exercises, raw=d)
+        exercises = [ExerciseEntry.from_dict(ex) for ex in (d.get("exercises") or [])]
+        return cls(
+            short_id=d.get("short_id") or d.get("id") or "",
+            date=d.get("date") or d.get("created_at") or "",
+            exercises=exercises,
+            raw=d,
+        )

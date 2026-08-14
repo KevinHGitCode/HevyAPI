@@ -8,6 +8,7 @@ from hevy.models import SetEntry, ExerciseEntry, Workout
 from hevy.analysis import epley_1rm, workout_volume, top_set_for_exercise, progression_by_exercise
 from hevy.storage import Storage
 from hevy.client import HevyClient
+from hevy.simplify import simplify_workout
 
 
 # --- datos de ejemplo (estructura real de la API de Hevy) ---
@@ -109,6 +110,33 @@ def test_incremental_stops_at_known(tmp_path):
     assert stopped is True
     assert saved == ["w0", "w1"]  # paró en w2, no re-consultó lo viejo
     assert st.count() == 3
+
+
+# 13 — simplify: recorta el ruido (idiomas, thumbnails, uuids) y el modelo lee el resultado
+def test_simplify_workout_strips_noise():
+    raw = {
+        "id": "u", "short_id": "abc", "name": "Superior B", "created_at": "2026-08-08T00:40:47Z",
+        "estimated_volume_kg": 9983,
+        "exercises": [{
+            "title": "Bench Press (Barbell)", "es_title": "Press de Banca (Barra)",
+            "de_title": "x", "ja_title": "y", "thumbnail_url": "http://t", "url": "http://u",
+            "muscle_group": "chest", "equipment_category": "barbell", "exercise_type": "weight_reps",
+            "other_muscles": ["triceps"],
+            "sets": [{"id": "s", "weight_kg": 80, "reps": 8, "rpe": None,
+                      "prs": [{"type": "best_1rm", "value": 98}], "geospatial_data": None}],
+        }],
+    }
+    s = simplify_workout(raw)
+    assert s["short_id"] == "abc" and s["name"] == "Superior B" and s["volume_kg"] == 9983
+    ex = s["exercises"][0]
+    assert ex["name"] == "Press de Banca (Barra)" and ex["name_en"] == "Bench Press (Barbell)"
+    assert ex["muscle_group"] == "chest" and ex["equipment"] == "barbell"
+    assert "de_title" not in ex and "thumbnail_url" not in ex and "url" not in ex  # ruido fuera
+    st = ex["sets"][0]
+    assert st["weight_kg"] == 80 and st["reps"] == 8 and st["pr"] == ["best_1rm"]
+    assert "id" not in st and "geospatial_data" not in st
+    w = Workout.from_dict(s)  # el modelo lee el simplificado
+    assert "press de banca" in w.exercises[0].name.lower()
 
 
 # 11 — refresh: renueva access_token, ROTA el refresh_token y persiste ambos

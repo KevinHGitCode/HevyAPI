@@ -9,6 +9,7 @@ from hevy.client import HevyClient, TokenExpiredError
 from hevy.storage import Storage
 from hevy.models import Workout, ExerciseEntry, SetEntry
 from hevy.analysis import progression_by_exercise, workout_volume
+from hevy.simplify import simplify_workout, is_simplified
 
 
 @click.group()
@@ -18,15 +19,30 @@ def cli():
 
 
 def _save_item(client, storage, it) -> bool:
-    """Guarda un workout (directo si ya trae ejercicios, si no lo pide por short_id). True si guardó."""
+    """Guarda un workout SIMPLIFICADO (directo si trae ejercicios, si no lo pide). True si guardó."""
     short = it.get("short_id") or it.get("id")
     if not short:
         return False
-    if it.get("exercises") or it.get("exercise_list"):
-        storage.save_workout(short, it)
-    else:
-        storage.save_workout(short, client.get_workout(short))
+    full = it if (it.get("exercises") or it.get("exercise_list")) else client.get_workout(short)
+    storage.save_workout(short, simplify_workout(full))
     return True
+
+
+@cli.command()
+def resimplify():
+    """Re-simplifica los workouts ya cacheados (sin tocar la red) para bajar su tamaño."""
+    storage = Storage()
+    n = 0
+    for r in storage.load_all():
+        if is_simplified(r):
+            continue
+        s = simplify_workout(r)
+        if s.get("short_id"):
+            storage.save_workout(s["short_id"], s)
+            n += 1
+    storage.conn.execute("VACUUM")  # recupera el espacio liberado
+    storage.conn.commit()
+    click.echo(f"Re-simplificados {n} (DB compactada). Total en DB: {storage.count()}")
 
 
 @cli.command()
