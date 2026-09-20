@@ -57,6 +57,12 @@ def fetch(username, max_pages, limit, short_ids, full):
     storage = Storage()
     if username:
         client.username = username
+    if client.username and "@" in client.username:
+        click.echo(
+            "⚠️ HEVY_USERNAME parece un EMAIL. Usá tu HANDLE de Hevy (ej. kevind21) en el .env, "
+            "no el email — el endpoint de workouts no acepta el email."
+        )
+        sys.exit(1)
     short_ids_arg = short_ids or os.getenv("HEVY_SHORT_IDS")
 
     new_count = 0

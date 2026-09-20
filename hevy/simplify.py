@@ -5,6 +5,22 @@ video, uuids, custom_metric/geospatial, media, likes, etc. Conserva español (+i
 grupo muscular, equipo y los sets con peso/reps/rpe/PR.
 """
 from typing import Dict, List
+from datetime import datetime, timezone, timedelta
+
+# Colombia = UTC-5 (para que la fecha local del entrenamiento sea correcta)
+_TZ = timedelta(hours=-5)
+
+
+def _workout_date(raw: Dict) -> str:
+    """Fecha REAL del entrenamiento (start_time), no la de registro (created_at).
+
+    Clave: al registrar un workout viejo, created_at = hoy; start_time = cuando entrenaste.
+    """
+    st = raw.get("start_time")
+    if isinstance(st, (int, float)):
+        return (datetime.fromtimestamp(st, timezone.utc) + _TZ).strftime("%Y-%m-%d")
+    c = raw.get("created_at") or raw.get("updated_at") or ""
+    return c[:10]
 
 
 def simplify_set(s: Dict) -> Dict:
@@ -34,7 +50,7 @@ def simplify_workout(raw: Dict) -> Dict:
     return {
         "short_id": raw.get("short_id") or raw.get("id"),
         "name": raw.get("name"),                           # nombre de la rutina (ej. "Superior B")
-        "date": raw.get("created_at") or raw.get("updated_at"),
+        "date": _workout_date(raw),                        # fecha REAL (start_time), no la de registro
         "volume_kg": raw.get("estimated_volume_kg"),
         "exercises": [simplify_exercise(ex) for ex in raw.get("exercises", [])],
     }
