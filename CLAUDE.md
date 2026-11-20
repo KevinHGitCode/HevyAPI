@@ -7,7 +7,7 @@
 ## Qué es
 CLI en Python que autentica contra la API privada de Hevy (reverse-engineered desde el navegador),
 baja los workouts a **SQLite** (cada uno como JSON simplificado) de forma **incremental**, y ofrece
-análisis de progresión por ejercicio. No es un producto: es para uso personal de Kevin (`kevind21`).
+análisis de progresión por ejercicio. No es un producto: es para uso personal de Kevin (`your_handle`).
 
 ## Arquitectura
 ```
@@ -22,7 +22,7 @@ tests/test_hevy.py      14 tests
 ```
 
 ## 🔑 API de Hevy — conocimiento ganado (CRÍTICO, no re-descubrir)
-- **Base:** `https://api.hevyapp.com`. Headers obligatorios: `x-api-key: shelobs_hevy_web` +
+- **Base:** `https://api.hevyapp.com`. Headers obligatorios: `x-api-key: <web-client-api-key>` +
   `hevy-platform: web` + `Authorization: Bearer <access_token>`.
 - **Auth:** el `/login` (usuario+contraseña) lleva **reCAPTCHA** → NO replicable por script. Se usa
   el **refresh_token**: `POST /auth/refresh_token` con body `{"refresh_token": <token>}` devuelve
@@ -34,7 +34,7 @@ tests/test_hevy.py      14 tests
     ⚠️ **`limit` máximo = 5** (limit>5 da 400). Respuesta: `{"workouts": [...]}`, workouts COMPLETOS.
   - `GET /workout/{short_id}` → detalle de un workout.
 - **Trampas que costaron tiempo (¡ya resueltas!):**
-  1. **`username` = el HANDLE (`kevind21`), NO el email** → email da 404. cli.py avisa si ve un "@".
+  1. **`username` = el HANDLE (`your_handle`), NO el email** → email da 404. cli.py avisa si ve un "@".
   2. **`limit` máx 5.**
   3. **Fecha real del entrenamiento = `start_time` (epoch), NO `created_at`** (esa es la de registro;
      al cargar workouts viejos, created_at = hoy y rompe la cronología). `simplify.py` usa start_time
@@ -53,8 +53,8 @@ El fetch es **incremental**: corta al primer `short_id` ya guardado. `--full` re
 ## Setup (.env)
 ```
 HEVY_BASE_URL=https://api.hevyapp.com
-HEVY_API_KEY=shelobs_hevy_web
-HEVY_USERNAME=kevind21          # HANDLE, no email
+HEVY_API_KEY=<web-client-api-key>
+HEVY_USERNAME=your_handle          # HANDLE, no email
 HEVY_REFRESH_TOKEN=<del navegador, una vez>   # Application>Local Storage de hevy.com
 ```
 El refresh_token rota; si la app web sigue abierta compite y lo invalida → mejor sacarlo tras

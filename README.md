@@ -13,10 +13,11 @@ un export compacto para pegar en un chat con IA.
 2. Creá tu `.env` a partir de `.env.example`:
    ```
    HEVY_BASE_URL=https://api.hevyapp.com
-   HEVY_API_KEY=shelobs_hevy_web
-   HEVY_USERNAME=tu_handle        # ⚠️ el handle (ej. kevind21), NO el email
+   HEVY_API_KEY=<web-client-api-key>
+   HEVY_USERNAME=tu_handle        # ⚠️ el handle (ej. your_handle), NO el email
    HEVY_BEARER_TOKEN=...          # el access_token (~40 chars) del header Authorization
    ```
+   > `HEVY_API_KEY` es la clave **pública del cliente web de Hevy** (la misma para todos): se ve en DevTools → Network → header `x-api-key` de cualquier petición a `api.hevyapp.com`. Si no la defines, el cliente usa ese valor por defecto. API no oficial: revisa los términos de uso de Hevy.
 
 ### Cómo sacar el token
 
@@ -32,7 +33,7 @@ largo de ~64 chars, es para el flujo automático que se implementará después �
 |---|---|
 | `python cli.py fetch` | Descarga **incremental** a SQLite (`data/hevy.db`): solo baja workouts **nuevos** y **corta** al llegar al primero ya guardado. |
 | `python cli.py fetch --full` | Re-escanea todo (no corta en el primero ya-conocido). |
-| `python cli.py fetch --username kevind21` | Igual, forzando el handle. |
+| `python cli.py fetch --username your_handle` | Igual, forzando el handle. |
 | `python cli.py fetch --limit 5 --max-pages 40` | Ajusta paginación (⚠️ la API limita `limit` a **5 máx.**). |
 | `python cli.py fetch --short-ids abc,def` | Baja solo esos workouts (plan B sin listar). |
 | `python cli.py resimplify` | Re-slim + compacta (VACUUM) los workouts ya cacheados, sin re-descargar. |
@@ -80,6 +81,6 @@ La primera vez migra automáticamente el viejo `data/workouts.json` si existe.
 ## Notas
 
 - API **no oficial** → para uso personal de tus propios datos; puede romperse sin aviso.
-- El `username` en la API es el **handle** (ej. `kevind21`), no el email.
+- El `username` en la API es el **handle** (ej. `your_handle`), no el email.
 - La API rechaza `limit > 5` (400 Bad Request).
 - Pendiente: flujo `refresh_token` para no re-pegar el token cada 15 min.
